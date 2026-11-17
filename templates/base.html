@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}InfraMonitor{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% if refresh_seconds %}
+  <meta http-equiv="refresh" content="{{ refresh_seconds }}">
+  {% endif %}
+</head>
+<body>
+  {% if session.get('logged_in') %}
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('overview') }}">Infra<span>Monitor</span></a>
+    <nav class="nav">
+      <a href="{{ url_for('overview') }}">Overview</a>
+      <a href="{{ url_for('server_new') }}">Add server</a>
+      <span class="muted nav-user">{{ session.get('username') }}</span>
+      <a href="{{ url_for('logout') }}">Sign out</a>
+    </nav>
+  </header>
+  {% endif %}
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <span>Local demo only · port 5600</span>
+  </footer>
+</body>
+</html>

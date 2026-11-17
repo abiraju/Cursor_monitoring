@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — InfraMonitor{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Linux hosts · local needs no SSH</p>
+  </div>
+  <a class="btn btn-inline" href="{{ url_for('overview') }}">Cancel</a>
+</div>
+
+<div class="card form-card">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="name">Display name (optional)</label>
+      <input id="name" name="name" type="text" value="{{ server.name if server else '' }}" placeholder="e.g. App server 1">
+    </div>
+
+    <div class="checkbox-row">
+      <input id="is_local" name="is_local" type="checkbox" {% if server and server.is_local %}checked{% endif %} onchange="toggleRemote(this.checked)">
+      <label for="is_local">Monitor this machine (local, no SSH)</label>
+    </div>
+
+    <div id="remote-fields">
+      <div class="form-group">
+        <label for="host">IP or hostname</label>
+        <input id="host" name="host" type="text" value="{{ server.host if server and not server.is_local else '' }}" placeholder="192.168.1.10">
+      </div>
+      <div class="form-group">
+        <label for="ssh_user">SSH username</label>
+        <input id="ssh_user" name="ssh_user" type="text" value="{{ server.ssh_user if server else '' }}" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="ssh_password">SSH password{% if server %} (leave blank to keep){% endif %}</label>
+        <input id="ssh_password" name="ssh_password" type="password" value="" autocomplete="new-password">
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-inline" type="submit">Save</button>
+  </form>
+</div>
+
+<script>
+function toggleRemote(isLocal) {
+  document.getElementById('remote-fields').style.display = isLocal ? 'none' : 'block';
+}
+toggleRemote(document.getElementById('is_local').checked);
+</script>
+{% endblock %}

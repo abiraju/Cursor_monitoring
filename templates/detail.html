@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ server.name }} — InfraMonitor{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ server.name }}</h1>
+    <p class="muted">
+      {% if server.is_local %}Local · {% endif %}{{ server.host }}
+      · auto-refresh {{ refresh_seconds }}s
+    </p>
+  </div>
+  <div class="card-actions">
+    <a class="btn btn-inline" href="{{ url_for('overview') }}">Back</a>
+    <a class="btn btn-inline" href="{{ url_for('server_edit', server_id=server.id) }}">Edit</a>
+  </div>
+</div>
+
+{% if not metrics.ok %}
+<div class="error-box">Could not collect metrics: {{ metrics.error }}</div>
+{% else %}
+<div class="detail-grid">
+  <div class="card metric">
+    <div class="label">CPU</div>
+    <div class="value">{{ metrics.cpu_percent }}%</div>
+  </div>
+  <div class="card metric">
+    <div class="label">Memory</div>
+    <div class="value value-sm">{{ metrics.memory.used_gb }} / {{ metrics.memory.total_gb }} GB ({{ metrics.memory.percent }}%)</div>
+  </div>
+  <div class="card metric">
+    <div class="label">Network sent</div>
+    <div class="value value-sm">{{ metrics.network.bytes_sent }} bytes</div>
+    <div class="muted small">{{ metrics.network.packets_sent }} packets</div>
+  </div>
+  <div class="card metric">
+    <div class="label">Network recv</div>
+    <div class="value value-sm">{{ metrics.network.bytes_recv }} bytes</div>
+    <div class="muted small">{{ metrics.network.packets_recv }} packets</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="section-title">Listening ports</h2>
+  {% if metrics.ports %}
+  <table>
+    <thead>
+      <tr><th>Proto</th><th>Address</th><th>Port</th></tr>
+    </thead>
+    <tbody>
+      {% for p in metrics.ports %}
+      <tr>
+        <td>{{ p.proto }}</td>
+        <td>{{ p.address }}</td>
+        <td>{{ p.port }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No listening ports reported (or permission denied).</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

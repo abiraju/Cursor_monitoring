@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Overview — InfraMonitor{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Servers</h1>
+    <p class="muted">CPU, memory, network, ports · auto-refresh {{ refresh_seconds }}s</p>
+  </div>
+  <a class="btn btn-primary btn-inline" href="{{ url_for('server_new') }}">Add server</a>
+</div>
+
+{% if not cards %}
+<section class="placeholder-card">
+  <h2>No servers yet</h2>
+  <p class="muted">Add this machine (local, no SSH) or a remote Linux host with SSH credentials.</p>
+  <p style="margin-top:1rem;"><a class="btn btn-primary btn-inline" href="{{ url_for('server_new') }}">Add server</a></p>
+</section>
+{% else %}
+<div class="grid">
+  {% for card in cards %}
+  {% set s = card.server %}
+  {% set m = card.metrics %}
+  <article class="card">
+    <h2>{{ s.name }}</h2>
+    <div class="host">
+      {% if s.is_local %}Local · {% endif %}{{ s.host }}
+      ·
+      {% if m.ok %}<span class="status-ok">online</span>{% else %}<span class="status-bad">error</span>{% endif %}
+    </div>
+    {% if m.ok %}
+    <div class="metrics-row">
+      <div class="metric"><div class="label">CPU</div><div class="value">{{ m.cpu_percent }}%</div></div>
+      <div class="metric"><div class="label">Memory</div><div class="value">{{ m.memory.percent }}%</div></div>
+      <div class="metric"><div class="label">Net recv</div><div class="value value-sm">{{ m.network.bytes_recv }}</div></div>
+      <div class="metric"><div class="label">Ports</div><div class="value">{{ m.ports|length }}</div></div>
+    </div>
+    {% else %}
+    <p class="status-bad small">{{ m.error }}</p>
+    {% endif %}
+    <div class="card-actions">
+      <a class="btn btn-sm btn-primary btn-inline" href="{{ url_for('detail', server_id=s.id) }}">Details</a>
+      <a class="btn btn-sm btn-inline" href="{{ url_for('server_edit', server_id=s.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('server_delete', server_id=s.id) }}" class="inline-form" onsubmit="return confirm('Delete this server?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-danger btn-inline" type="submit">Delete</button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
