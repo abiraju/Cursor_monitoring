@@ -16,7 +16,7 @@ from flask import (
     session,
     url_for,
 )
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFError, CSRFProtect
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from monitor.metrics import collect_for_server
@@ -31,16 +31,35 @@ from storage import (
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD_HASH = generate_password_hash("admin123")
 REFRESH_SECONDS = 8
+SECRET_KEY_FILE = Path(__file__).resolve().parent / "data" / ".secret_key"
+
+
+def _resolve_secret_key() -> str:
+    """Prefer env; otherwise reuse a local key so restarts do not break CSRF sessions."""
+    env_key = os.environ.get("SECRET_KEY")
+    if env_key:
+        return env_key
+    SECRET_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if SECRET_KEY_FILE.exists():
+        existing = SECRET_KEY_FILE.read_text(encoding="utf-8").strip()
+        if existing:
+            return existing
+    key = secrets.token_hex(32)
+    SECRET_KEY_FILE.write_text(key, encoding="utf-8")
+    return key
 
 
 def create_app(test_config: dict | None = None) -> Flask:
     app = Flask(__name__)
     app.config.from_mapping(
-        SECRET_KEY=os.environ.get("SECRET_KEY") or secrets.token_hex(32),
+        SECRET_KEY=_resolve_secret_key(),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=False,
+        SESSION_COOKIE_PATH="/",
         WTF_CSRF_ENABLED=True,
         WTF_CSRF_TIME_LIMIT=None,
+        WTF_CSRF_SSL_STRICT=False,
         SERVERS_FILE=str(DEFAULT_DATA_FILE),
         DEBUG=False,
     )
@@ -48,6 +67,14 @@ def create_app(test_config: dict | None = None) -> Flask:
         app.config.update(test_config)
 
     CSRFProtect(app)
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(_error: CSRFError):
+        flash(
+            "Session expired or cookies were blocked. Refresh the sign-in page and try again.",
+            "error",
+        )
+        return redirect(url_for("login"))
 
     def servers_path() -> Path:
         return Path(app.config["SERVERS_FILE"])
@@ -66,6 +93,10 @@ def create_app(test_config: dict | None = None) -> Flask:
         if session.get("logged_in"):
             return redirect(url_for("overview"))
 
+        # Establish session on GET so the CSRF cookie/session exists before POST.
+        if request.method == "GET":
+            session.setdefault("_csrf_ready", True)
+
         error = None
         if request.method == "POST":
             username = (request.form.get("username") or "").strip()
@@ -81,6 +112,7 @@ def create_app(test_config: dict | None = None) -> Flask:
                     next_url = url_for("overview")
                 return redirect(next_url)
             error = "Invalid username or password."
+            session.setdefault("_csrf_ready", True)
 
         return render_template("login.html", error=error)
 

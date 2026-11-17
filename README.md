@@ -13,7 +13,8 @@ Local demo only — Flask UI for Linux server monitoring (CPU, memory, network, 
 | Storage | Hashed with Werkzeug (not plaintext) |
 
 Flow: **sign in** → Overview → add/edit servers → detail metrics → **sign out**.  
-CSRF tokens protect login and mutating forms. Session cookie is HttpOnly + SameSite=Lax.
+CSRF tokens protect login and mutating forms. Session cookie is HttpOnly + SameSite=Lax.  
+If you see **CSRF session token is missing**, hard-refresh `/login` and allow cookies for `127.0.0.1` (often caused by an app restart mid-login).
 
 Do **not** commit real SSH passwords. `data/` is gitignored.
 
@@ -29,7 +30,7 @@ python app.py
 
 Open **http://127.0.0.1:5600**
 
-Optional: `export SECRET_KEY=your-local-secret` for a stable session key.
+Optional: `export SECRET_KEY=your-local-secret` (otherwise a key is kept in `data/.secret_key`, gitignored).
 
 ## Usage
 
